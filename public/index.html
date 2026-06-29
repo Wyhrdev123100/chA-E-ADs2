@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ MC Bot Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
+<script src="/socket.io/socket.io.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ================================================================ */
+/* MINECRAFT THEME VARIABLES                                       */
+/* ================================================================ */
+:root {
+    --mc-dark:       #1a1a2e;
+    --mc-darker:     #12121f;
+    --mc-darkest:    #0a0a14;
+    --mc-panel:      #1e2140;
+    --mc-panel-hover:#252850;
+    --mc-border:     #2d2f5e;
+    --mc-border-glow:#4a4dab;
+    --mc-text:       #e8e8ff;
+    --mc-text2:      #8888bb;
+    --mc-text-muted: #5555aa;
+    --mc-green:      #55ff55;
+    --mc-red:        #ff5555;
+    --mc-yellow:     #ffff55;
+    --mc-blue:       #5555ff;
+    --mc-aqua:       #55ffff;
+    --mc-gold:       #ffaa00;
+    --mc-purple:     #aa00ff;
+    --mc-pink:       #ff55ff;
+    --mc-white:      #ffffff;
+    --mc-gray:       #aaaaaa;
+    --mc-dark-gray:  #555555;
+    --mc-health:     #e44040;
+    --mc-hunger:     #c87137;
+    --mc-xp:        #80ff20;
+    --mc-armor:      #a0a0a0;
+    --mc-radius:     6px;
+    --mc-radius-lg:  12px;
+    --mc-shadow:     0 4px 20px rgba(0,0,0,0.6);
+    --mc-shadow-glow:0 0 20px rgba(85,85,255,0.15);
+    --mc-font:       'Inter', -apple-system, sans-serif;
+    --mc-mono:       'JetBrains Mono', monospace;
+    --mc-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Minecraft inventory slot */
+    --inv-bg:        #8b8b8b;
+    --inv-border-t:  #c6c6c6;
+    --inv-border-b:  #555555;
+    --inv-slot:      #8b8b8b;
+    --inv-slot-inner:#373737;
+}
+
+/* ================================================================ */
+/* RESET & BASE                                                    */
+/* ================================================================ */
+*{margin:0;padding:0;box-sizing:border-box}
+html{font-size:14px;scroll-behavior:smooth}
+body{
+    font-family:var(--mc-font);
+    background:var(--mc-darkest);
+    color:var(--mc-text);
+    min-height:100vh;
+    overflow:hidden;
+}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--mc-darker)}
+::-webkit-scrollbar-thumb{background:var(--mc-border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--mc-border-glow)}
+img{image-rendering:pixelated}
+
+/* ================================================================ */
+/* MINECRAFT ITEM IMAGES                                           */
+/* ================================================================ */
+.mc-item-img{
+    width:32px;height:32px;
+    image-rendering:pixelated;
+    image-rendering:crisp-edges;
+}
+.mc-item-img-sm{width:16px;height:16px;image-rendering:pixelated}
+.mc-item-img-lg{width:48px;height:48px;image-rendering:pixelated}
+.mc-item-img-xl{width:64px;height:64px;image-rendering:pixelated}
+
+.mc-head{
+    width:32px;height:32px;
+    image-rendering:pixelated;
+    border-radius:4px;
+}
+
+/* ================================================================ */
+/* LAYOUT                                                          */
+/* ================================================================ */
+.app{display:flex;height:100vh}
+
+/* ================================================================ */
+/* SIDEBAR                                                         */
+/* ================================================================ */
+.sidebar{
+    width:280px;min-width:280px;
+    background:linear-gradient(180deg,var(--mc-dark),var(--mc-darker));
+    border-right:2px solid var(--mc-border);
+    display:flex;flex-direction:column;
+    overflow:hidden;
+    position:relative;
+}
+.sidebar::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,var(--mc-blue),var(--mc-purple),var(--mc-pink));
+}
+.sidebar-header{
+    padding:16px;
+    border-bottom:1px solid var(--mc-border);
+    display:flex;justify-content:space-between;align-items:center;
+}
+.sidebar-title{
+    font-size:0.8rem;font-weight:700;
+    color:var(--mc-gold);
+    text-transform:uppercase;letter-spacing:2px;
+    display:flex;align-items:center;gap:8px;
+}
+.bot-list{flex:1;overflow-y:auto;padding:8px}
+
+/* Bot item */
+.bot-item{
+    padding:12px;margin-bottom:4px;
+    border-radius:var(--mc-radius);
+    cursor:pointer;
+    border:2px solid transparent;
+    transition:var(--mc-transition);
+    background:rgba(255,255,255,0.02);
+    position:relative;overflow:hidden;
+}
+.bot-item:hover{
+    background:var(--mc-panel);
+    border-color:rgba(85,85,255,0.2);
+}
+.bot-item.active{
+    background:var(--mc-panel);
+    border-color:var(--mc-blue);
+    box-shadow:var(--mc-shadow-glow);
+}
+.bot-item.active::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:var(--mc-blue);
+}
+.bot-item-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.bot-name{font-weight:700;font-size:0.95rem;display:flex;align-items:center;gap:6px}
+.bot-badge{
+    padding:3px 8px;border-radius:10px;
+    font-size:0.65rem;font-weight:800;
+    text-transform:uppercase;letter-spacing:0.5px;
+}
+.bot-badge.online{background:rgba(85,255,85,0.15);color:var(--mc-green);border:1px solid rgba(85,255,85,0.3)}
+.bot-badge.offline{background:rgba(255,85,85,0.15);color:var(--mc-red);border:1px solid rgba(255,85,85,0.3)}
+.bot-badge.connecting{background:rgba(255,255,85,0.15);color:var(--mc-yellow);border:1px solid rgba(255,255,85,0.3)}
+.bot-badge.kicked{background:rgba(255,170,0,0.15);color:var(--mc-gold);border:1px solid rgba(255,170,0,0.3)}
+.bot-badge.error{background:rgba(255,85,85,0.15);color:var(--mc-red);border:1px solid rgba(255,85,85,0.3)}
+.bot-info{font-size:0.72rem;color:var(--mc-text2);display:flex;justify-content:space-between}
+
+/* MC Health bar giống game */
+.mc-health-bar{
+    height:10px;margin-top:8px;
+    background:var(--mc-darkest);
+    border:1px solid var(--mc-border);
+    border-radius:2px;overflow:hidden;
+    position:relative;
+}
+.mc-health-fill{
+    height:100%;
+    background:linear-gradient(180deg,#f04040,#c03030);
+    transition:width 0.5s ease;
+    position:relative;
+}
+.mc-health-fill::after{
+    content:'';position:absolute;top:0;left:0;right:0;height:50%;
+    background:rgba(255,255,255,0.2);
+}
+
+.sidebar-footer{
+    padding:12px;
+    border-top:1px solid var(--mc-border);
+    display:flex;flex-direction:column;gap:8px;
+}
+
+/* ================================================================ */
+/* MAIN                                                            */
+/* ================================================================ */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Header */
+.header{
+    background:linear-gradient(135deg,var(--mc-dark),var(--mc-darker));
+    border-bottom:2px solid var(--mc-border);
+    padding:0 20px;height:60px;
+    display:flex;align-items:center;justify-content:space-between;
+    position:relative;
+}
+.header::after{
+    content:'';position:absolute;bottom:-2px;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,var(--mc-blue),transparent);
+}
+.logo{
+    font-size:1.2rem;font-weight:900;
+    display:flex;align-items:center;gap:10px;
+    letter-spacing:-0.5px;
+}
+.logo-text{
+    background:linear-gradient(135deg,var(--mc-gold),var(--mc-yellow));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.logo-sub{font-size:0.7rem;color:var(--mc-text2);font-weight:500}
+.header-right{display:flex;align-items:center;gap:12px}
+.conn-dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--mc-red);
+    animation:pulse 2s ease infinite;
+}
+.conn-dot.on{background:var(--mc-green)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.3)}}
+
+/* ================================================================ */
+/* TABS - Minecraft stone button style                             */
+/* ================================================================ */
+.tabs{
+    display:flex;
+    background:var(--mc-darker);
+    border-bottom:2px solid var(--mc-border);
+    padding:4px 8px 0;gap:2px;
+    overflow-x:auto;
+}
+.tab{
+    padding:10px 18px;cursor:pointer;
+    font-size:0.82rem;font-weight:700;
+    color:var(--mc-text2);
+    border:2px solid transparent;
+    border-bottom:none;
+    border-radius:var(--mc-radius) var(--mc-radius) 0 0;
+    transition:var(--mc-transition);
+    white-space:nowrap;
+    display:flex;align-items:center;gap:6px;
+    position:relative;
+    background:rgba(255,255,255,0.02);
+}
+.tab:hover{
+    color:var(--mc-text);
+    background:var(--mc-panel);
+}
+.tab.active{
+    color:var(--mc-gold);
+    background:var(--mc-panel);
+    border-color:var(--mc-border);
+}
+.tab.active::after{
+    content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;
+    background:var(--mc-panel);
+}
+
+/* ================================================================ */
+/* CONTENT                                                         */
+/* ================================================================ */
+.content{flex:1;overflow-y:auto;padding:20px}
+.panel{display:none;animation:fadeIn 0.3s ease}
+.panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ================================================================ */
+/* CARDS - Minecraft panel style                                   */
+/* ================================================================ */
+.card{
+    background:var(--mc-panel);
+    border:2px solid var(--mc-border);
+    border-radius:var(--mc-radius-lg);
+    padding:18px;margin-bottom:16px;
+    transition:var(--mc-transition);
+    position:relative;overflow:hidden;
+}
+.card:hover{border-color:rgba(85,85,255,0.3)}
+.card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.05),transparent);
+}
+.card-title{
+    font-size:0.85rem;font-weight:800;
+    color:var(--mc-gold);
+    text-transform:uppercase;letter-spacing:1px;
+    margin-bottom:14px;
+    display:flex;align-items:center;gap:8px;
+    padding-bottom:10px;
+    border-bottom:1px solid var(--mc-border);
+}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+
+/* ================================================================ */
+/* STAT CARDS - Minecraft enchantment glow                         */
+/* ================================================================ */
+.stat{
+    background:linear-gradient(135deg,var(--mc-panel),var(--mc-panel-hover));
+    border:2px solid var(--mc-border);
+    border-radius:var(--mc-radius-lg);
+    padding:16px;text-align:center;
+    transition:var(--mc-transition);
+    position:relative;overflow:hidden;
+}
+.stat:hover{
+    transform:translateY(-3px);
+    box-shadow:var(--mc-shadow-glow);
+    border-color:var(--mc-border-glow);
+}
+.stat-icon{font-size:1.8rem;margin-bottom:6px}
+.stat-val{
+    font-size:1.8rem;font-weight:900;
+    font-family:var(--mc-mono);
+}
+.stat-val.health{color:var(--mc-health)}
+.stat-val.food{color:var(--mc-hunger)}
+.stat-val.xp{color:var(--mc-xp)}
+.stat-val.players{color:var(--mc-aqua)}
+.stat-lbl{
+    font-size:0.7rem;color:var(--mc-text2);
+    text-transform:uppercase;letter-spacing:1px;
+    margin-top:2px;
+}
+
+/* ================================================================ */
+/* MINECRAFT HEALTH / HUNGER / XP BARS                             */
+/* ================================================================ */
+.mc-bar-container{margin:6px 0 12px}
+.mc-bar-label{font-size:0.75rem;color:var(--mc-text2);margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.mc-bar{
+    height:12px;
+    background:var(--mc-darkest);
+    border:2px solid var(--mc-border);
+    border-radius:3px;overflow:hidden;
+    position:relative;
+}
+.mc-bar-fill{
+    height:100%;transition:width 0.6s ease;
+    position:relative;
+}
+.mc-bar-fill::after{
+    content:'';position:absolute;top:0;left:0;right:0;height:50%;
+    background:rgba(255,255,255,0.15);
+}
+.mc-bar-fill.health{background:linear-gradient(180deg,#e44040,#b03030)}
+.mc-bar-fill.hunger{background:linear-gradient(180deg,#c87137,#a05828)}
+.mc-bar-fill.xp{background:linear-gradient(180deg,#80ff20,#60c010)}
+.mc-bar-fill.armor{background:linear-gradient(180deg,#c0c0c0,#808080)}
+
+/* ================================================================ */
+/* BUTTONS - Minecraft stone button                                */
+/* ================================================================ */
+.btn{
+    padding:8px 16px;border:none;
+    border-radius:var(--mc-radius);
+    cursor:pointer;
+    font-family:var(--mc-font);
+    font-size:0.82rem;font-weight:700;
+    transition:var(--mc-transition);
+    display:inline-flex;align-items:center;gap:6px;
+    text-transform:uppercase;letter-spacing:0.5px;
+    position:relative;overflow:hidden;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--mc-shadow)}
+.btn:active{transform:translateY(0)}
+.btn-mc{
+    background:linear-gradient(180deg,#8b8b8b,#6d6d6d);
+    color:var(--mc-white);
+    border:2px outset #a0a0a0;
+    text-shadow:2px 2px 0 rgba(0,0,0,0.4);
+}
+.btn-mc:hover{background:linear-gradient(180deg,#9b9bbb,#7d7d9d)}
+.btn-mc:active{border-style:inset}
+.btn-green{
+    background:linear-gradient(180deg,#44aa44,#338833);
+    color:var(--mc-white);
+    border:2px outset #55cc55;
+    text-shadow:2px 2px 0 rgba(0,0,0,0.4);
+}
+.btn-red{
+    background:linear-gradient(180deg,#cc4444,#993333);
+    color:var(--mc-white);
+    border:2px outset #dd6666;
+    text-shadow:2px 2px 0 rgba(0,0,0,0.4);
+}
+.btn-gold{
+    background:linear-gradient(180deg,#cc8800,#996600);
+    color:var(--mc-white);
+    border:2px outset #ddaa22;
+    text-shadow:2px 2px 0 rgba(0,0,0,0.4);
+}
+.btn-blue{
+    background:linear-gradient(180deg,#4444cc,#333399);
+    color:var(--mc-white);
+    border:2px outset #6666dd;
+    text-shadow:2px 2px 0 rgba(0,0,0,0.4);
+}
+.btn-sm{padding:5px 10px;font-size:0.72rem}
+.btn-row{display:flex;flex-wrap:wrap;gap:6px}
+
+/* ================================================================ */
+/* FORMS - Minecraft styled                                        */
+/* ================================================================ */
+.form-group{margin-bottom:10px}
+.label{
+    display:block;font-size:0.72rem;font-weight:700;
+    color:var(--mc-gold);margin-bottom:4px;
+    text-transform:uppercase;letter-spacing:0.5px;
+}
+.input,.select{
+    width:100%;padding:8px 12px;
+    background:var(--mc-darkest);
+    border:2px solid var(--mc-border);
+    border-radius:var(--mc-radius);
+    color:var(--mc-text);
+    font-family:var(--mc-font);font-size:0.85rem;
+    transition:var(--mc-transition);
+}
+.input:focus,.select:focus{
+    outline:none;border-color:var(--mc-blue);
+    box-shadow:0 0 10px rgba(85,85,255,0.2);
+}
+.input::placeholder{color:var(--mc-text-muted)}
+.row{display:flex;gap:8px}
+.row .form-group{flex:1}
+
+/* ================================================================ */
+/* INVENTORY - Minecraft style slots                               */
+/* ================================================================ */
+.inv-container{
+    background:var(--inv-bg);
+    border:4px solid;
+    border-color:var(--inv-border-t) var(--inv-border-b) var(--inv-border-b) var(--inv-border-t);
+    border-radius:4px;
+    padding:8px;
+    image-rendering:pixelated;
+}
+.inv-grid{
+    display:grid;grid-template-columns:repeat(9,1fr);
+    gap:2px;
+}
+.inv-slot{
+    aspect-ratio:1;
+    background:var(--inv-slot-inner);
+    border:2px solid;
+    border-color:#373737 #8b8b8b #8b8b8b #373737;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    cursor:pointer;position:relative;
+    padding:2px;min-height:40px;
+    transition:background 0.1s;
+}
+.inv-slot:hover{background:#4a4a4a}
+.inv-slot.filled{background:#2a2a4a}
+.inv-slot .item-img{
+    width:28px;height:28px;
+    image-rendering:pixelated;
+    image-rendering:crisp-edges;
+}
+.inv-slot .item-count{
+    position:absolute;bottom:1px;right:3px;
+    font-size:0.65rem;font-weight:800;
+    color:var(--mc-white);
+    text-shadow:1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+    font-family:var(--mc-mono);
+}
+.inv-slot .item-name{
+    font-size:0;/* Hidden in grid view */
+}
+.inv-slot .item-durability{
+    position:absolute;bottom:2px;left:2px;right:2px;height:2px;
+    background:#333;border-radius:1px;overflow:hidden;
+}
+.inv-slot .item-durability-fill{
+    height:100%;background:var(--mc-green);
+}
+
+/* Hotbar */
+.hotbar{
+    display:grid;grid-template-columns:repeat(9,1fr);
+    gap:2px;margin-top:8px;
+    background:var(--inv-bg);
+    border:4px solid;
+    border-color:var(--inv-border-t) var(--inv-border-b) var(--inv-border-b) var(--inv-border-t);
+    border-radius:4px;padding:4px;
+}
+.hotbar-slot{
+    aspect-ratio:1;
+    background:var(--inv-slot-inner);
+    border:2px solid;
+    border-color:#373737 #8b8b8b #8b8b8b #373737;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;position:relative;min-height:44px;
+}
+.hotbar-slot.selected{
+    border-color:var(--mc-white);
+    box-shadow:0 0 8px rgba(255,255,255,0.4);
+}
+.hotbar-slot:hover{background:#4a4a4a}
+
+/* ================================================================ */
+/* CHAT - Minecraft chat style                                     */
+/* ================================================================ */
+.chat-box{
+    background:rgba(0,0,0,0.7);
+    border:2px solid var(--mc-border);
+    border-radius:var(--mc-radius-lg);
+    display:flex;flex-direction:column;
+    height:400px;overflow:hidden;
+    font-family:var(--mc-mono);
+}
+.chat-msgs{flex:1;overflow-y:auto;padding:10px}
+.chat-msg{
+    padding:2px 0;font-size:0.82rem;line-height:1.6;
+    text-shadow:1px 1px 0 rgba(0,0,0,0.8);
+}
+.chat-msg .time{color:var(--mc-dark-gray);font-size:0.7rem;margin-right:6px}
+.chat-msg .user{font-weight:700}
+.chat-msg .user.self{color:var(--mc-purple)}
+.chat-msg .user.other{color:var(--mc-aqua)}
+.chat-msg.system{color:var(--mc-yellow);font-style:italic}
+.chat-msg.whisper .user{color:var(--mc-pink)}
+.chat-msg.sent .user{color:var(--mc-purple)}
+.chat-input-row{display:flex;border-top:2px solid var(--mc-border)}
+.chat-input{
+    flex:1;padding:10px 12px;
+    background:rgba(0,0,0,0.5);border:none;
+    color:var(--mc-text);
+    font-family:var(--mc-mono);font-size:0.85rem;
+}
+.chat-input:focus{outline:none;background:rgba(0,0,0,0.7)}
+
+/* ================================================================ */
+/* CONSOLE - Terminal style                                        */
+/* ================================================================ */
+.console-box{
+    background:#0a0a10;
+    border:2px solid var(--mc-border);
+    border-radius:var(--mc-radius-lg);
+    font-family:var(--mc-mono);font-size:0.75rem;
+    display:flex;flex-direction:column;height:450px;
+}
+.console-header{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:8px 14px;border-bottom:1px solid var(--mc-border);
+    background:var(--mc-darker);
+}
+.console-out{flex:1;overflow-y:auto;padding:10px}
+.c-line{padding:1px 0;display:flex;gap:8px}
+.c-time{color:var(--mc-dark-gray);min-width:70px}
+.c-lvl{min-width:42px;font-weight:700;text-transform:uppercase;font-size:0.65rem}
+.c-lvl.info{color:var(--mc-green)}
+.c-lvl.warn{color:var(--mc-yellow)}
+.c-lvl.error{color:var(--mc-red)}
+.c-lvl.debug{color:var(--mc-aqua)}
+.c-msg{color:var(--mc-text);word-break:break-all}
+.console-in{display:flex;border-top:1px solid var(--mc-border)}
+.console-prefix{padding:8px 10px;color:var(--mc-green);font-weight:700}
+.console-input{
+    flex:1;padding:8px;background:transparent;border:none;
+    color:var(--mc-text);font-family:var(--mc-mono);font-size:0.82rem;
+}
+.console-input:focus{outline:none}
+
+/* ================================================================ */
+/* ENTITY LIST                                                     */
+/* ================================================================ */
+.entity-list{max-height:400px;overflow-y:auto}
+.entity-item{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:8px 12px;border-bottom:1px solid var(--mc-border);
+    transition:background 0.1s;
+}
+.entity-item:hover{background:var(--mc-panel-hover)}
+.entity-info{display:flex;align-items:center;gap:10px}
+.entity-icon{
+    width:32px;height:32px;border-radius:6px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.1rem;border:1px solid var(--mc-border);
+}
+.entity-icon.hostile{background:rgba(255,85,85,0.15);border-color:rgba(255,85,85,0.3)}
+.entity-icon.player{background:rgba(85,255,255,0.15);border-color:rgba(85,255,255,0.3)}
+.entity-icon.passive{background:rgba(85,255,85,0.15);border-color:rgba(85,255,85,0.3)}
+.entity-name{font-weight:700;font-size:0.85rem;display:flex;align-items:center;gap:4px}
+.entity-detail{font-size:0.72rem;color:var(--mc-text2)}
+.entity-dist{font-size:0.8rem;color:var(--mc-text2);font-weight:700;font-family:var(--mc-mono)}
+.target-tag{
+    font-size:0.6rem;font-weight:800;
+    color:var(--mc-red);background:rgba(255,85,85,0.15);
+    padding:1px 5px;border-radius:3px;
+    border:1px solid rgba(255,85,85,0.3);
+}
+
+/* ================================================================ */
+/* KILLAURA PANEL                                                  */
+/* ================================================================ */
+.ka-panel{
+    background:linear-gradient(135deg,var(--mc-panel),rgba(255,85,85,0.05));
+    border:2px solid var(--mc-border);
+    border-radius:var(--mc-radius-lg);
+    padding:18px;margin-bottom:16px;
+    position:relative;overflow:hidden;
+}
+.ka-panel.active{border-color:var(--mc-red);box-shadow:0 0 15px rgba(255,85,85,0.15)}
+.ka-panel.active::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,var(--mc-red),var(--mc-gold),var(--mc-red));
+    animation:kaGlow 2s linear infinite;
+}
+@keyframes kaGlow{0%{opacity:0.5}50%{opacity:1}100%{opacity:0.5}}
+.ka-header{display:flex;justify-content:space-between;align-items:center}
+.ka-title{font-size:1.1rem;font-weight:900;display:flex;align-items:center;gap:8px}
+.ka-stats{display:flex;gap:16px;font-size:0.78rem;color:var(--mc-text2);margin-top:6px;font-family:var(--mc-mono)}
+.ka-target{
+    margin-top:10px;padding:10px;
+    background:rgba(0,0,0,0.2);border-radius:var(--mc-radius);
+    border:1px solid var(--mc-border);
+}
+.ka-target-name{font-weight:800;color:var(--mc-gold);font-size:0.9rem}
+.ka-target-info{font-size:0.75rem;color:var(--mc-text2);margin-top:2px;font-family:var(--mc-mono)}
+.ka-config{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* Toggle switch */
+.toggle{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 0;border-bottom:1px solid var(--mc-border);
+}
+.toggle-label{font-size:0.85rem;font-weight:700}
+.toggle-sub{font-size:0.7rem;color:var(--mc-text2);margin-top:2px}
+.toggle-sw{
+    width:42px;height:22px;
+    background:var(--mc-darkest);
+    border-radius:11px;cursor:pointer;
+    position:relative;transition:background 0.2s;
+    border:2px solid var(--mc-border);
+    flex-shrink:0;
+}
+.toggle-sw.on{background:var(--mc-green);border-color:var(--mc-green)}
+.toggle-sw::after{
+    content:'';width:14px;height:14px;
+    background:var(--mc-white);border-radius:50%;
+    position:absolute;top:2px;left:2px;transition:left 0.2s;
+}
+.toggle-sw.on::after{left:22px}
+
+/* ================================================================ */
+/* MODAL - Minecraft enchantment table                             */
+/* ================================================================ */
+.overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.8);
+    backdrop-filter:blur(4px);
+    display:none;align-items:center;justify-content:center;z-index:1000;
+}
+.overlay.show{display:flex}
+.modal{
+    background:var(--mc-dark);
+    border:3px solid var(--mc-border);
+    border-radius:var(--mc-radius-lg);
+    padding:28px;width:480px;max-width:95vw;
+    box-shadow:var(--mc-shadow),var(--mc-shadow-glow);
+    animation:modalIn 0.25s ease;
+    position:relative;
+}
+.modal::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,var(--mc-gold),var(--mc-yellow),var(--mc-gold));
+}
+@keyframes modalIn{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}
+.modal-title{
+    font-size:1.1rem;font-weight:900;margin-bottom:18px;
+    color:var(--mc-gold);display:flex;align-items:center;gap:10px;
+}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+
+/* ================================================================ */
+/* TOAST                                                           */
+/* ================================================================ */
+.toasts{position:fixed;top:70px;right:16px;z-index:2000;display:flex;flex-direction:column;gap:6px}
+.toast{
+    padding:10px 18px;border-radius:var(--mc-radius);
+    font-size:0.82rem;font-weight:700;
+    animation:toastIn 0.3s ease, toastOut 0.3s ease 3.7s forwards;
+    max-width:340px;
+    box-shadow:var(--mc-shadow);
+    border:2px solid;
+    text-shadow:1px 1px 0 rgba(0,0,0,0.4);
+}
+.toast.success{background:linear-gradient(135deg,#338833,#226622);border-color:#55cc55;color:var(--mc-green)}
+.toast.error{background:linear-gradient(135deg,#993333,#662222);border-color:#dd6666;color:var(--mc-red)}
+.toast.info{background:linear-gradient(135deg,#333399,#222266);border-color:#6666dd;color:var(--mc-aqua)}
+.toast.warning{background:linear-gradient(135deg,#886600,#664400);border-color:#ddaa22;color:var(--mc-gold)}
+@keyframes toastIn{from{opacity:0;transform:translateX(50px)}to{opacity:1;transform:translateX(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0}}
+
+/* ================================================================ */
+/* EMPTY STATE                                                     */
+/* ================================================================ */
+.empty{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    height:100%;color:var(--mc-text2);gap:14px;padding:40px;text-align:center;
+}
+.empty-icon{font-size:4rem;opacity:0.3;filter:grayscale(50%)}
+
+/* ================================================================ */
+/* RESPONSIVE                                                      */
+/* ================================================================ */
+@media(max-width:900px){
+    .sidebar{display:none}
+    .grid2,.grid3,.grid4{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+    .tabs{padding:2px 4px 0}
+    .tab{padding:8px 10px;font-size:0.75rem}
+    .content{padding:10px}
+    .inv-grid{grid-template-columns:repeat(9,1fr)}
+    .inv-slot{min-height:32px}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- ============================================================ -->
+<!-- SIDEBAR                                                      -->
+<!-- ============================================================ -->
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-title">⚔️ BOTS</div>
+        <button class="btn btn-sm btn-mc" onclick="refreshAll()">🔄</button>
+    </div>
+    <div class="bot-list" id="botList">
+        <div class="empty" style="padding:30px">
+            <div class="empty-icon">🤖</div>
+            <p style="font-size:0.8rem">Chưa có bot nào</p>
+        </div>
+    </div>
+    <div class="sidebar-footer">
+        <button class="btn btn-green" style="width:100%" onclick="showCreateModal()">➕ TẠO BOT MỚI</button>
+        <div style="text-align:center;font-size:0.65rem;color:var(--mc-text-muted)" id="globalInfo">Dashboard v5.0</div>
+    </div>
+</aside>
+
+<!-- ============================================================ -->
+<!-- MAIN                                                         -->
+<!-- ============================================================ -->
+<div class="main">
+    <div class="header">
+        <div>
+            <div class="logo">
+                <span style="font-size:1.4rem">⚔️</span>
+                <div>
+                    <span class="logo-text">MC Bot Dashboard</span>
+                    <div class="logo-sub">KillAura Edition</div>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <span id="botCount" style="font-size:0.8rem;color:var(--mc-text2)">0 bots</span>
+            <div class="conn-dot" id="connDot"></div>
+            <span id="connText" style="font-size:0.75rem;color:var(--mc-text2)">...</span>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" data-tab="overview" onclick="switchTab('overview')">📊 Overview</div>
+        <div class="tab" data-tab="killaura" onclick="switchTab('killaura')">⚔️ KillAura</div>
+        <div class="tab" data-tab="chat" onclick="switchTab('chat')">💬 Chat</div>
+        <div class="tab" data-tab="inventory" onclick="switchTab('inventory')">🎒 Inventory</div>
+        <div class="tab" data-tab="entities" onclick="switchTab('entities')">👁️ Entities</div>
+        <div class="tab" data-tab="console" onclick="switchTab('console')">🖥️ Console</div>
+    </div>
+
+    <div class="content">
+
+        <!-- OVERVIEW -->
+        <div class="panel active" id="panel-overview">
+            <div id="noBot" class="empty">
+                <div class="empty-icon">⛏️</div>
+                <h2 style="color:var(--mc-gold);font-size:1.3rem">Minecraft Bot Dashboard</h2>
+                <p style="color:var(--mc-text2)">Tạo bot để bắt đầu điều khiển</p>
+                <button class="btn btn-green" onclick="showCreateModal()">➕ TẠO BOT ĐẦU TIÊN</button>
+            </div>
+            <div id="botView" style="display:none">
+                <!-- Stats -->
+                <div class="grid4" style="margin-bottom:16px" id="statCards">
+                    <div class="stat">
+                        <div class="stat-icon"><img src="https://mc-heads.net/head/MHF_Steve/32" class="mc-item-img" onerror="this.outerHTML='❤️'"></div>
+                        <div class="stat-val health" id="ov-health">--</div>
+                        <div class="stat-lbl">Health</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-icon"><img src="https://mcapi.marveldc.me/item/cooked_beef?width=32" class="mc-item-img" onerror="this.outerHTML='🍖'"></div>
+                        <div class="stat-val food" id="ov-food">--</div>
+                        <div class="stat-lbl">Food</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-icon"><img src="https://mcapi.marveldc.me/item/experience_bottle?width=32" class="mc-item-img" onerror="this.outerHTML='⭐'"></div>
+                        <div class="stat-val xp" id="ov-level">--</div>
+                        <div class="stat-lbl">Level</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-val players" id="ov-players">--</div>
+                        <div class="stat-lbl">Players</div>
+                    </div>
+                </div>
+
+                <!-- Bars + Position -->
+                <div class="grid2">
+                    <div class="card">
+                        <div class="card-title">📍 Position & World</div>
+                        <div style="font-family:var(--mc-mono);font-size:0.9rem;color:var(--mc-aqua);margin-bottom:12px">
+                            X: <span id="ov-x">--</span> &nbsp;
+                            Y: <span id="ov-y">--</span> &nbsp;
+                            Z: <span id="ov-z">--</span>
+                        </div>
+                        <div style="font-size:0.78rem;color:var(--mc-text2);display:grid;grid-template-columns:1fr 1fr;gap:4px">
+                            <span>🌍 Dim: <span id="ov-dim" style="color:var(--mc-text)">--</span></span>
+                            <span>🎮 Mode: <span id="ov-mode" style="color:var(--mc-text)">--</span></span>
+                            <span>🕐 Time: <span id="ov-time" style="color:var(--mc-text)">--</span></span>
+                            <span>🌤️ Weather: <span id="ov-weather" style="color:var(--mc-text)">--</span></span>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">📊 Status Bars</div>
+                        <div class="mc-bar-container">
+                            <div class="mc-bar-label"><img src="https://mcapi.marveldc.me/item/red_dye?width=12" class="mc-item-img-sm" onerror="this.outerHTML='❤️'"> Health</div>
+                            <div class="mc-bar"><div class="mc-bar-fill health" id="bar-health" style="width:0%"></div></div>
+                        </div>
+                        <div class="mc-bar-container">
+                            <div class="mc-bar-label"><img src="https://mcapi.marveldc.me/item/cooked_beef?width=12" class="mc-item-img-sm" onerror="this.outerHTML='🍖'"> Hunger</div>
+                            <div class="mc-bar"><div class="mc-bar-fill hunger" id="bar-food" style="width:0%"></div></div>
+                        </div>
+                        <div class="mc-bar-container">
+                            <div class="mc-bar-label"><img src="https://mcapi.marveldc.me/item/experience_bottle?width=12" class="mc-item-img-sm" onerror="this.outerHTML='⭐'"> Experience</div>
+                            <div class="mc-bar"><div class="mc-bar-fill xp" id="bar-exp" style="width:0%"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick actions -->
+                <div class="card">
+                    <div class="card-title">⚡ Quick Actions</div>
+                    <div class="btn-row">
+                        <button class="btn btn-mc" onclick="doAction('autoEat',{enabled:true})">🍖 Auto Eat</button>
+                        <button class="btn btn-mc" onclick="doAction('autoEat',{enabled:false})">🚫 Stop Eat</button>
+                        <button class="btn btn-gold" onclick="doAction('stop',{})">⏹️ Stop All</button>
+                        <button class="btn btn-red" onclick="doAction('disconnect',{})">🔌 Disconnect</button>
+                        <button class="btn btn-green" onclick="reconnectCurrent()">🔄 Reconnect</button>
+                        <button class="btn btn-red" onclick="removeCurrent()">🗑️ Remove Bot</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KILLAURA -->
+        <div class="panel" id="panel-killaura">
+            <div class="ka-panel" id="kaPanel">
+                <div class="ka-header">
+                    <div>
+                        <div class="ka-title">⚔️ KillAura</div>
+                        <div class="ka-stats">
+                            <span>⏱️ <span id="ka-cd">--</span>ms</span>
+                            <span>🖱️ <span id="ka-clicks">0</span> clicks</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-green" id="kaBtn" onclick="toggleKA()">▶️ ENABLE</button>
+                </div>
+                <div class="ka-target" id="kaTarget" style="display:none">
+                    <div class="ka-target-name">🎯 <span id="ka-tname">--</span></div>
+                    <div class="ka-target-info">
+                        📏 <span id="ka-tdist">--</span>m &nbsp;
+                        ❤️ <span id="ka-thp">--</span> HP
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">⚙️ KillAura Settings</div>
+                <div class="ka-config">
+                    <div class="form-group">
+                        <label class="label">Range (1-6)</label>
+                        <input class="input" id="ka-range" type="number" value="4.5" min="1" max="6" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label class="label">Speed (0=auto)</label>
+                        <input class="input" id="ka-speed" type="number" value="0" min="0" max="12" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label class="label">Priority</label>
+                        <select class="select" id="ka-priority">
+                            <option value="angle">Angle</option>
+                            <option value="distance">Distance</option>
+                            <option value="health">Health</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="label">FOV (30-360°)</label>
+                        <input class="input" id="ka-fov" type="number" value="360" min="30" max="360" step="10">
+                    </div>
+                    <div class="form-group">
+                        <label class="label">Target Type</label>
+                        <select class="select" id="ka-type">
+                            <option value="hostile">Hostile Mobs</option>
+                            <option value="player">Players</option>
+                            <option value="mob">All Mobs</option>
+                            <option value="all">All Entities</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="toggle">
+                    <div><div class="toggle-label">Pause on Containers</div><div class="toggle-sub">Dừng khi mở chest</div></div>
+                    <div class="toggle-sw on" id="tog-containers" onclick="togOpt('containers')"></div>
+                </div>
+                <div class="toggle">
+                    <div><div class="toggle-label">Filter Animals</div><div class="toggle-sub">Bỏ qua động vật</div></div>
+                    <div class="toggle-sw on" id="tog-animals" onclick="togOpt('animals')"></div>
+                </div>
+                <div class="toggle">
+                    <div><div class="toggle-label">Filter Players</div><div class="toggle-sub">Bỏ qua người chơi</div></div>
+                    <div class="toggle-sw" id="tog-players" onclick="togOpt('players')"></div>
+                </div>
+                <div style="margin-top:14px">
+                    <button class="btn btn-blue" onclick="applyKA()">💾 Apply & Start</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHAT -->
+        <div class="panel" id="panel-chat">
+            <div class="chat-box" style="height:calc(100vh - 180px)">
+                <div class="chat-msgs" id="chatMsgs">
+                    <div style="text-align:center;padding:30px;color:var(--mc-dark-gray)">Tin nhắn chat sẽ hiện ở đây...</div>
+                </div>
+                <div class="chat-input-row">
+                    <input class="chat-input" id="chatIn" placeholder="Nhập tin nhắn... (Enter)" onkeypress="if(event.key==='Enter')sendChat()">
+                    <button class="btn btn-mc" style="border-radius:0" onclick="sendChat()">GỬI</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- INVENTORY -->
+        <div class="panel" id="panel-inventory">
+            <div class="card">
+                <div class="card-title" style="justify-content:space-between">
+                    <span>🎒 Inventory</span>
+                    <button class="btn btn-sm btn-mc" onclick="refreshInv()">🔄 Refresh</button>
+                </div>
+                <div class="inv-container">
+                    <div class="inv-grid" id="invGrid"></div>
+                    <div style="margin:8px 0 4px;font-size:0.7rem;color:var(--mc-gray);text-align:center">─── Hotbar ───</div>
+                    <div class="hotbar" id="hotbarGrid"></div>
+                </div>
+            </div>
+            <div class="grid2">
+                <div class="card">
+                    <div class="card-title">🛡️ Equipment</div>
+                    <div id="eqDisplay"><p style="color:var(--mc-text2)">--</p></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">🔧 Item Actions</div>
+                    <div class="form-group">
+                        <label class="label">Equip Item</label>
+                        <div class="row">
+                            <input class="input" id="equipName" placeholder="Item name">
+                            <select class="select" id="equipSlot" style="max-width:90px">
+                                <option value="hand">Hand</option>
+                                <option value="head">Head</option>
+                                <option value="torso">Chest</option>
+                                <option value="legs">Legs</option>
+                                <option value="feet">Boots</option>
+                            </select>
+                            <button class="btn btn-sm btn-green" onclick="equipItem()">Go</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="label">Hotbar Slot (0-8)</label>
+                        <div class="row">
+                            <input class="input" id="hotbarSlot" type="number" min="0" max="8" value="0">
+                            <button class="btn btn-sm btn-mc" onclick="setHotbar()">Set</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="label">Drop Item</label>
+                        <div class="row">
+                            <input class="input" id="dropName" placeholder="Item name">
+                            <input class="input" id="dropCount" type="number" value="1" style="max-width:60px">
+                            <button class="btn btn-sm btn-gold" onclick="dropItem()">Drop</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-red" style="width:100%;margin-top:6px" onclick="doAction('drop',{all:true})">🗑️ Drop All Items</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ENTITIES -->
+        <div class="panel" id="panel-entities">
+            <div class="grid2">
+                <div class="card">
+                    <div class="card-title" style="justify-content:space-between">
+                        <span>👁️ Nearby Entities</span>
+                        <button class="btn btn-sm btn-mc" onclick="refreshEntities()">🔄</button>
+                    </div>
+                    <div class="entity-list" id="entityList">
+                        <div style="padding:20px;text-align:center;color:var(--mc-text2)">Không có entity</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">👥 Players Online</div>
+                    <div class="entity-list" id="playerList">
+                        <div style="padding:20px;text-align:center;color:var(--mc-text2)">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONSOLE -->
+        <div class="panel" id="panel-console">
+            <div class="console-box" style="height:calc(100vh - 180px)">
+                <div class="console-header">
+                    <span style="font-weight:700;font-size:0.85rem;color:var(--mc-green)">🖥️ Console</span>
+                    <div style="display:flex;gap:6px">
+                        <select class="select" id="logFilter" onchange="filterLogs()" style="width:90px;padding:3px 6px;font-size:0.72rem">
+                            <option value="all">All</option>
+                            <option value="info">Info</option>
+                            <option value="warn">Warn</option>
+                            <option value="error">Error</option>
+                        </select>
+                        <button class="btn btn-sm btn-mc" onclick="clearConsole()">Clear</button>
+                    </div>
+                </div>
+                <div class="console-out" id="consoleOut"></div>
+                <div class="console-in">
+                    <span class="console-prefix">❯</span>
+                    <input class="console-input" id="consoleIn" placeholder="Nhập lệnh chat..." onkeypress="if(event.key==='Enter')sendConsoleCmd()">
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+</div>
+
+<!-- CREATE MODAL -->
+<div class="overlay" id="createModal">
+    <div class="modal">
+        <div class="modal-title">⚔️ Tạo Bot Mới</div>
+        <div class="form-group">
+            <label class="label">Username *</label>
+            <input class="input" id="m-user" value="BotPlayer" placeholder="Bot username">
+        </div>
+        <div class="row">
+            <div class="form-group"><label class="label">Server Host</label><input class="input" id="m-host" value="localhost"></div>
+            <div class="form-group"><label class="label">Port</label><input class="input" id="m-port" type="number" value="25565"></div>
+        </div>
+        <div class="row">
+            <div class="form-group">
+                <label class="label">Version</label>
+                <select class="select" id="m-ver">
+                    <option value="1.21.1">1.21.1</option>
+                    <option value="1.21">1.21</option>
+                    <option value="1.20.4">1.20.4</option>
+                    <option value="1.20.1" selected>1.20.1</option>
+                    <option value="1.19.4">1.19.4</option>
+                    <option value="1.18.2">1.18.2</option>
+                    <option value="1.16.5">1.16.5</option>
+                    <option value="1.12.2">1.12.2</option>
+                    <option value="1.8.9">1.8.9</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="label">Auth</label>
+                <select class="select" id="m-auth">
+                    <option value="offline">Offline</option>
+                    <option value="microsoft">Microsoft</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-mc" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-green" onclick="createBot()">🚀 Create & Connect</button>
+        </div>
+    </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<!-- ============================================================ -->
+<!-- JAVASCRIPT                                                   -->
+<!-- ============================================================ -->
+<script>
+// ================================================================
+// MINECRAFT ITEM IMAGE URL
+// Dùng mc-api.net hoặc fallback emoji
+// ================================================================
+
+const MC_ITEM_CDN = 'https://mcapi.marveldc.me/item/';
+const MC_HEAD_CDN = 'https://mc-heads.net/avatar/';
+
+function mcItemUrl(name, size = 32) {
+    if (!name) return '';
+    return `${MC_ITEM_CDN}${encodeURIComponent(name)}?width=${size}`;
+}
+
+function mcHeadUrl(username, size = 32) {
+    return `${MC_HEAD_CDN}${encodeURIComponent(username)}/${size}`;
+}
+
+function itemImgTag(name, size = 28) {
+    if (!name) return '<span style="font-size:1.2rem">📦</span>';
+    const url = mcItemUrl(name, size);
+    const emoji = getItemEmoji(name);
+    return `<img src="${url}" class="item-img" width="${size}" height="${size}" onerror="this.outerHTML='<span style=\\'font-size:1.2rem\\'>${emoji}</span>'" loading="lazy">`;
+}
+
+function getItemEmoji(n) {
+    if (!n) return '📦';
+    const m = {
+        diamond:'💎', gold:'🥇', iron:'🔩', emerald:'💚', coal:'⚫',
+        redstone:'🔴', lapis:'🔵', sword:'🗡️', pickaxe:'⛏️', axe:'🪓',
+        shovel:'🏗️', bow:'🏹', shield:'🛡️', helmet:'⛑️', chestplate:'👕',
+        leggings:'👖', boots:'👟', apple:'🍎', bread:'🍞', beef:'🥩',
+        pork:'🥓', fish:'🐟', carrot:'🥕', potato:'🥔', wheat:'🌾',
+        log:'🪵', stone:'🪨', dirt:'🟫', sand:'🟨', torch:'🔦',
+        bucket:'🪣', bone:'🦴', arrow:'➡️', book:'📖', map:'🗺️',
+        chest:'📦', potion:'🧪', golden:'🌟', cooked:'🍖', ender:'🟣',
+        pearl:'🟣', blaze:'🔥', string:'🧵', feather:'🪶',
+        leather:'🟤', stick:'🪵', glass:'🔲', wool:'🐑',
+        egg:'🥚', slime:'🟢', flint:'⬛', obsidian:'🟪',
+        crafting:'🔨', furnace:'🔥', anvil:'🔨', enchant:'✨',
+        nether:'🔴', end:'🟪', dragon:'🐉', wither:'💀',
+        trident:'🔱', crossbow:'🏹', netherite:'⬛', amethyst:'🟣'
+    };
+    for (const [k, v] of Object.entries(m)) {
+        if (n.toLowerCase().includes(k)) return v;
+    }
+    return '📦';
+}
+
+// ================================================================
+// STATE
+// ================================================================
+
+const S = {
+    socket: null, connected: false, selectedId: null,
+    bots: {}, chatMsgs: {}, consoleLogs: [], logFilter: 'all',
+    kaToggles: { containers: true, animals: true, players: false }
+};
+
+// ================================================================
+// SOCKET
+// ================================================================
+
+function initSocket() {
+    S.socket = io({ reconnection: true, reconnectionDelay: 1000 });
+
+    S.socket.on('connect', () => { S.connected = true; setConn(true); toast('Connected!', 'success'); });
+    S.socket.on('disconnect', () => { S.connected = false; setConn(false); toast('Disconnected!', 'error'); });
+
+    S.socket.on('init', d => {
+        if (d.bots) { d.bots.forEach(b => S.bots[b.id] = b); renderBots(); }
+    });
+
+    S.socket.on('status:update', d => {
+        if (d.bots) {
+            d.bots.forEach(b => S.bots[b.id] = b);
+            renderBots();
+            if (S.selectedId && S.bots[S.selectedId]) {
+                updateOV(S.bots[S.selectedId]);
+                updateKAStatus(S.bots[S.selectedId]);
+            }
+        }
+        if (d.stats) document.getElementById('botCount').textContent = `${d.stats.activeBots} bots`;
+    });
+
+    S.socket.on('bot:created', b => { S.bots[b.id] = b; renderBots(); toast(`Bot "${b.username}" created!`, 'success'); });
+    S.socket.on('bot:removed', d => { delete S.bots[d.botId]; if (S.selectedId === d.botId) { S.selectedId = null; showNoBot(); } renderBots(); });
+    S.socket.on('bot:update', b => { S.bots[b.id] = b; renderBots(); if (S.selectedId === b.id) { updateOV(b); updateKAStatus(b); } });
+    S.socket.on('bot:detail', b => { if (S.selectedId === b.id) updateDetail(b); });
+    S.socket.on('bot:chat', d => addChat(d.botId, d));
+    S.socket.on('bot:message', d => addChat(d.botId, { type: 'system', message: d.message, timestamp: d.timestamp }));
+    S.socket.on('bot:health', d => { if (S.selectedId === d.botId) updateBars(d.health, d.food); });
+    S.socket.on('bot:death', d => { if (S.selectedId === d.botId) toast('Bot died! 💀', 'error'); });
+    S.socket.on('bot:killaura', d => {
+        if (S.selectedId === d.botId) {
+            document.getElementById('ka-clicks').textContent = d.totalClicks;
+            if (d.target) {
+                document.getElementById('ka-tname').textContent = d.target.name;
+                document.getElementById('ka-tdist').textContent = d.target.distance;
+                document.getElementById('ka-thp').textContent = d.target.health || '?';
+                document.getElementById('kaTarget').style.display = 'block';
+            }
+        }
+    });
+    S.socket.on('bot:playerJoined', d => addChat(d.botId, { type: 'system', message: `${d.player.username} joined`, timestamp: Date.now() }));
+    S.socket.on('bot:playerLeft', d => addChat(d.botId, { type: 'system', message: `${d.player.username} left`, timestamp: Date.now() }));
+    S.socket.on('log', e => addLog(e));
+}
+
+function setConn(ok) {
+    document.getElementById('connDot').className = 'conn-dot' + (ok ? ' on' : '');
+    document.getElementById('connText').textContent = ok ? 'Connected' : 'Disconnected';
+}
+
+// ================================================================
+// BOT LIST
+// ================================================================
+
+function renderBots() {
+    const ids = Object.keys(S.bots), el = document.getElementById('botList');
+    if (!ids.length) { el.innerHTML = '<div class="empty" style="padding:30px"><div class="empty-icon">🤖</div><p style="font-size:0.8rem">Chưa có bot</p></div>'; return; }
+
+    el.innerHTML = ids.map(id => {
+        const b = S.bots[id], hp = b.health != null ? (b.health / 20 * 100) : 0, act = id === S.selectedId;
+        const headUrl = mcHeadUrl(b.username, 20);
+        return `<div class="bot-item ${act ? 'active' : ''}" onclick="selectBot('${id}')">
+            <div class="bot-item-top">
+                <span class="bot-name"><img src="${headUrl}" width="20" height="20" style="border-radius:3px;image-rendering:pixelated" onerror="this.style.display='none'"> ${esc(b.username)}</span>
+                <span class="bot-badge ${b.status}">${b.status}</span>
+            </div>
+            <div class="bot-info">
+                <span>${esc(b.host)}:${b.port}</span>
+                ${b.position ? `<span style="font-family:var(--mc-mono);font-size:0.65rem">${Math.round(b.position.x)}, ${Math.round(b.position.y)}, ${Math.round(b.position.z)}</span>` : ''}
+            </div>
+            ${b.status === 'online' ? `<div class="mc-health-bar"><div class="mc-health-fill" style="width:${hp}%"></div></div>` : ''}
+            ${b.killaura?.enabled ? '<div style="font-size:0.65rem;color:var(--mc-red);font-weight:700;margin-top:4px">⚔️ KillAura ON</div>' : ''}
+            ${b.currentTask ? `<div style="font-size:0.6rem;color:var(--mc-gold);margin-top:2px">${esc(b.currentTask)}</div>` : ''}
+        </div>`;
+    }).join('');
+}
+
+function selectBot(id) {
+    S.selectedId = id;
+    renderBots(); showBotView();
+    S.socket.emit('bot:subscribe', { botId: id });
+    const b = S.bots[id];
+    if (b) { updateOV(b); updateKAStatus(b); }
+    refreshInv(); refreshEntities();
+    const msgs = S.chatMsgs[id] || [];
+    const c = document.getElementById('chatMsgs');
+    c.innerHTML = '';
+    msgs.slice(-80).forEach(m => appendChat(m));
+}
+
+function showNoBot() { document.getElementById('noBot').style.display = 'flex'; document.getElementById('botView').style.display = 'none'; }
+function showBotView() { document.getElementById('noBot').style.display = 'none'; document.getElementById('botView').style.display = 'block'; }
+
+// ================================================================
+// OVERVIEW
+// ================================================================
+
+function updateOV(b) {
+    document.getElementById('ov-health').textContent = b.health != null ? Math.round(b.health * 10) / 10 : '--';
+    document.getElementById('ov-food').textContent = b.food != null ? b.food : '--';
+    document.getElementById('ov-level').textContent = b.experience?.level ?? '--';
+    document.getElementById('ov-players').textContent = b.playerCount ?? '--';
+    if (b.position) {
+        document.getElementById('ov-x').textContent = b.position.x;
+        document.getElementById('ov-y').textContent = b.position.y;
+        document.getElementById('ov-z').textContent = b.position.z;
+    }
+    document.getElementById('ov-dim').textContent = b.dimension || '--';
+    document.getElementById('ov-mode').textContent = b.gameMode || '--';
+    if (b.time) {
+        const h = Math.floor(b.time.timeOfDay / 1000 + 6) % 24;
+        const m = Math.floor((b.time.timeOfDay % 1000) / 1000 * 60);
+        document.getElementById('ov-time').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+    document.getElementById('ov-weather').textContent = b.isRaining ? '🌧️ Rain' : '☀️ Clear';
+    updateBars(b.health || 0, b.food || 0, b.experience?.progress || 0);
+}
+
+function updateBars(h, f, xp = 0) {
+    document.getElementById('bar-health').style.width = (h / 20 * 100) + '%';
+    document.getElementById('bar-food').style.width = (f / 20 * 100) + '%';
+    document.getElementById('bar-exp').style.width = (xp * 100) + '%';
+}
+
+// ================================================================
+// KILLAURA
+// ================================================================
+
+function updateKAStatus(b) {
+    if (!b.killaura) return;
+    const ka = b.killaura;
+    document.getElementById('ka-cd').textContent = ka.cooldownMs;
+    document.getElementById('ka-clicks').textContent = ka.totalClicks;
+    const btn = document.getElementById('kaBtn');
+    const panel = document.getElementById('kaPanel');
+    if (ka.enabled) {
+        btn.textContent = '⏹️ DISABLE'; btn.className = 'btn btn-red';
+        panel.classList.add('active');
+        if (ka.currentTarget) {
+            document.getElementById('ka-tname').textContent = ka.currentTarget.name;
+            document.getElementById('ka-tdist').textContent = ka.currentTarget.distance;
+            document.getElementById('ka-thp').textContent = ka.currentTarget.health || '?';
+            document.getElementById('kaTarget').style.display = 'block';
+        } else {
+            document.getElementById('kaTarget').style.display = 'none';
+        }
+    } else {
+        btn.textContent = '▶️ ENABLE'; btn.className = 'btn btn-green';
+        panel.classList.remove('active');
+        document.getElementById('kaTarget').style.display = 'none';
+    }
+}
+
+function toggleKA() {
+    if (!S.selectedId) { toast('Select bot!', 'warning'); return; }
+    const b = S.bots[S.selectedId];
+    if (b?.killaura?.enabled) doAction('killaura', { enabled: false });
+    else applyKA();
+}
+
+function applyKA() {
+    if (!S.selectedId) { toast('Select bot!', 'warning'); return; }
+    doAction('killaura', {
+        enabled: true,
+        range: parseFloat(document.getElementById('ka-range').value) || 4.5,
+        speed: parseFloat(document.getElementById('ka-speed').value) || 0,
+        priority: document.getElementById('ka-priority').value,
+        fov: parseFloat(document.getElementById('ka-fov').value) || 360,
+        targetTypes: [document.getElementById('ka-type').value],
+        pauseOnContainers: S.kaToggles.containers,
+        filterAnimals: S.kaToggles.animals,
+        filterPlayers: S.kaToggles.players
+    });
+    toast('KillAura ON! ⚔️', 'success');
+}
+
+function togOpt(k) {
+    S.kaToggles[k] = !S.kaToggles[k];
+    const el = document.getElementById(`tog-${k}`);
+    el.classList.toggle('on', S.kaToggles[k]);
+}
+
+// ================================================================
+// ACTIONS
+// ================================================================
+
+function doAction(a, p = {}) {
+    if (!S.selectedId) { toast('Select bot!', 'warning'); return; }
+    S.socket.emit('bot:action', { botId: S.selectedId, action: a, params: p }, r => {
+        if (!r?.success) toast(`Error: ${r?.error}`, 'error');
+    });
+}
+
+function reconnectCurrent() {
+    if (!S.selectedId) return;
+    S.socket.emit('bot:reconnect', { botId: S.selectedId }, r => { if (r?.success) toast('Reconnecting...', 'info'); });
+}
+
+function removeCurrent() {
+    if (!S.selectedId || !confirm('Remove bot?')) return;
+    S.socket.emit('bot:remove', { botId: S.selectedId });
+}
+
+// ================================================================
+// CHAT
+// ================================================================
+
+function addChat(botId, entry) {
+    if (!S.chatMsgs[botId]) S.chatMsgs[botId] = [];
+    S.chatMsgs[botId].push(entry);
+    if (S.chatMsgs[botId].length > 300) S.chatMsgs[botId] = S.chatMsgs[botId].slice(-150);
+    if (S.selectedId === botId) appendChat(entry);
+}
+
+function appendChat(e) {
+    const c = document.getElementById('chatMsgs');
+    const tip = c.querySelector('div[style*="text-align:center"]');
+    if (tip) tip.remove();
+    const d = document.createElement('div');
+    d.className = `chat-msg ${e.type || 'chat'}`;
+    const t = new Date(e.timestamp || Date.now()).toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    if (e.type === 'system') d.innerHTML = `<span class="time">${t}</span> <em>${esc(e.message)}</em>`;
+    else {
+        const cls = e.type === 'sent' ? 'self' : 'other';
+        d.innerHTML = `<span class="time">${t}</span> <span class="user ${cls}">&lt;${esc(e.username || 'Bot')}&gt;</span> ${esc(e.message)}`;
+    }
+    c.appendChild(d);
+    c.scrollTop = c.scrollHeight;
+}
+
+function sendChat() {
+    if (!S.selectedId) { toast('Select bot!', 'warning'); return; }
+    const inp = document.getElementById('chatIn'), msg = inp.value.trim();
+    if (!msg) return;
+    S.socket.emit('bot:chat', { botId: S.selectedId, message: msg });
+    addChat(S.selectedId, { type: 'sent', username: S.bots[S.selectedId]?.username || 'Bot', message: msg, timestamp: Date.now() });
+    inp.value = '';
+}
+
+// ================================================================
+// INVENTORY - với hình ảnh item thật
+// ================================================================
+
+function refreshInv() {
+    if (!S.selectedId) return;
+    S.socket.emit('bot:inventory', { botId: S.selectedId }, r => {
+        if (r?.success) renderInv(r.inventory);
+    });
+}
+
+function renderInv(items) {
+    const mainSlots = new Array(27).fill(null);
+    const hotbarSlots = new Array(9).fill(null);
+
+    if (items) items.forEach(i => {
+        if (i.slot >= 9 && i.slot < 36) mainSlots[i.slot - 9] = i;
+        else if (i.slot >= 36 && i.slot < 45) hotbarSlots[i.slot - 36] = i;
+        else if (i.slot >= 0 && i.slot < 9) hotbarSlots[i.slot] = i;
+    });
+
+    // Main inventory (27 slots)
+    document.getElementById('invGrid').innerHTML = mainSlots.map((item, idx) => {
+        if (!item) return `<div class="inv-slot"></div>`;
+        return `<div class="inv-slot filled" title="${esc(item.displayName || item.name)} x${item.count}" onclick="pickItem('${esc(item.name)}')">
+            ${itemImgTag(item.name, 28)}
+            ${item.count > 1 ? `<span class="item-count">${item.count}</span>` : ''}
+            ${item.maxDurability > 0 ? `<div class="item-durability"><div class="item-durability-fill" style="width:${Math.max(0, 100 - (item.durabilityUsed / item.maxDurability * 100))}%"></div></div>` : ''}
+        </div>`;
+    }).join('');
+
+    // Hotbar (9 slots)
+    const bot = S.bots[S.selectedId];
+    const selectedSlot = bot?.hotbarSlot || 0;
+
+    document.getElementById('hotbarGrid').innerHTML = hotbarSlots.map((item, idx) => {
+        const selected = idx === selectedSlot ? 'selected' : '';
+        if (!item) return `<div class="hotbar-slot ${selected}" onclick="doAction('hotbar',{slot:${idx}})"><span style="font-size:0.6rem;color:var(--mc-dark-gray)">${idx + 1}</span></div>`;
+        return `<div class="hotbar-slot ${selected}" title="${esc(item.displayName || item.name)} x${item.count}" onclick="doAction('hotbar',{slot:${idx}})">
+            ${itemImgTag(item.name, 32)}
+            ${item.count > 1 ? `<span class="item-count">${item.count}</span>` : ''}
+        </div>`;
+    }).join('');
+}
+
+function pickItem(name) {
+    document.getElementById('equipName').value = name;
+    document.getElementById('dropName').value = name;
+}
+
+function updateDetail(b) {
+    if (b.inventory) renderInv(b.inventory);
+    if (b.equipment) renderEq(b.equipment);
+    if (b.nearbyEntities) renderEntityList(b.nearbyEntities);
+    if (b.players) renderPlayerList(b.players);
+}
+
+function renderEq(eq) {
+    const el = document.getElementById('eqDisplay');
+    const slots = { head: '⛑️ Head', torso: '👕 Chest', legs: '👖 Legs', feet: '👟 Boots', hand: '🗡️ Hand', 'off-hand': '🛡️ Off' };
+    el.innerHTML = Object.entries(slots).map(([s, lbl]) => {
+        const item = eq[s];
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--mc-border)">
+            <span style="color:var(--mc-text2);font-size:0.82rem">${lbl}</span>
+            <span style="display:flex;align-items:center;gap:4px">${item ? itemImgTag(item.name, 16) + ' ' + esc(item.displayName || item.name) : '<span style="color:var(--mc-text-muted)">Empty</span>'}</span>
+        </div>`;
+    }).join('');
+}
+
+function equipItem() {
+    const n = document.getElementById('equipName').value.trim(), s = document.getElementById('equipSlot').value;
+    if (!n) { toast('Enter item name', 'warning'); return; }
+    doAction('equip', { itemName: n, destination: s });
+}
+
+function setHotbar() { doAction('hotbar', { slot: parseInt(document.getElementById('hotbarSlot').value) }); }
+
+function dropItem() {
+    const n = document.getElementById('dropName').value.trim(), c = document.getElementById('dropCount').value;
+    if (!n) { toast('Enter item name', 'warning'); return; }
+    doAction('drop', { itemName: n, count: c });
+}
+
+// ================================================================
+// ENTITIES
+// ================================================================
+
+function refreshEntities() {
+    if (!S.selectedId) return;
+    fetch(`/api/bots/${S.selectedId}/entities`).then(r => r.json()).then(d => { if (d.success) renderEntityList(d.entities); }).catch(() => {});
+    fetch(`/api/bots/${S.selectedId}/players`).then(r => r.json()).then(d => { if (d.success) renderPlayerList(d.players); }).catch(() => {});
+}
+
+function renderEntityList(entities) {
+    const el = document.getElementById('entityList');
+    if (!entities?.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mc-text2)">No entities</div>'; return; }
+    el.innerHTML = entities.slice(0, 40).map(e => {
+        const icon = e.isHostile ? '💀' : e.type === 'player' ? '👤' : '🐄';
+        const cls = e.isHostile ? 'hostile' : e.type === 'player' ? 'player' : 'passive';
+        const headImg = e.type === 'player' && e.username ? `<img src="${mcHeadUrl(e.username, 28)}" width="28" height="28" style="border-radius:4px;image-rendering:pixelated" onerror="this.outerHTML='${icon}'">` : icon;
+        return `<div class="entity-item">
+            <div class="entity-info">
+                <div class="entity-icon ${cls}">${headImg}</div>
+                <div>
+                    <div class="entity-name">${esc(e.name || 'Unknown')} ${e.isTarget ? '<span class="target-tag">⚔️ TARGET</span>' : ''}</div>
+                    <div class="entity-detail">${e.type} | HP: ${e.health || '?'}</div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+                <span class="entity-dist">${e.distance}m</span>
+                ${e.type !== 'player' ? `<button class="btn btn-sm btn-red" onclick="doAction('attack',{entityId:${e.id}})">⚔️</button>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderPlayerList(players) {
+    const el = document.getElementById('playerList');
+    if (!players?.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mc-text2)">No players</div>'; return; }
+    el.innerHTML = players.map(p => `<div class="entity-item">
+        <div class="entity-info">
+            <div class="entity-icon player"><img src="${mcHeadUrl(p.username, 28)}" width="28" height="28" style="border-radius:4px;image-rendering:pixelated" onerror="this.outerHTML='👤'"></div>
+            <div>
+                <div class="entity-name">${esc(p.username)}</div>
+                <div class="entity-detail">Ping: ${p.ping}ms ${p.entity ? `| ${p.entity.distance}m` : ''}</div>
+            </div>
+        </div>
+    </div>`).join('');
+}
+
+// ================================================================
+// CONSOLE
+// ================================================================
+
+function addLog(e) {
+    S.consoleLogs.push(e);
+    if (S.consoleLogs.length > 1000) S.consoleLogs = S.consoleLogs.slice(-500);
+    if (S.logFilter !== 'all' && e.level !== S.logFilter) return;
+    appendLog(e);
+}
+
+function appendLog(e) {
+    const out = document.getElementById('consoleOut');
+    const d = document.createElement('div'); d.className = 'c-line';
+    const t = e.time || new Date(e.timestamp).toLocaleTimeString();
+    d.innerHTML = `<span class="c-time">${t}</span><span class="c-lvl ${e.level}">${e.level}</span><span class="c-msg">${esc(e.message)}</span>`;
+    out.appendChild(d);
+    if (out.children.length > 300) out.removeChild(out.firstChild);
+    out.scrollTop = out.scrollHeight;
+}
+
+function filterLogs() {
+    S.logFilter = document.getElementById('logFilter').value;
+    const out = document.getElementById('consoleOut'); out.innerHTML = '';
+    S.consoleLogs.forEach(e => { if (S.logFilter === 'all' || e.level === S.logFilter) appendLog(e); });
+}
+
+function clearConsole() { document.getElementById('consoleOut').innerHTML = ''; S.consoleLogs = []; }
+
+function sendConsoleCmd() {
+    if (!S.selectedId) { toast('Select bot!', 'warning'); return; }
+    const inp = document.getElementById('consoleIn'), msg = inp.value.trim();
+    if (!msg) return;
+    S.socket.emit('bot:chat', { botId: S.selectedId, message: msg });
+    inp.value = '';
+}
+
+// ================================================================
+// CREATE BOT
+// ================================================================
+
+function showCreateModal() { document.getElementById('createModal').classList.add('show'); document.getElementById('m-user').focus(); }
+function closeModal() { document.getElementById('createModal').classList.remove('show'); }
+
+function createBot() {
+    const u = document.getElementById('m-user').value.trim();
+    if (!u) { toast('Enter username!', 'error'); return; }
+    S.socket.emit('bot:create', {
+        username: u, host: document.getElementById('m-host').value.trim() || 'localhost',
+        port: parseInt(document.getElementById('m-port').value) || 25565,
+        version: document.getElementById('m-ver').value,
+        auth: document.getElementById('m-auth').value
+    }, r => {
+        if (r?.success) { closeModal(); setTimeout(() => selectBot(r.botId), 300); }
+        else toast(`Error: ${r?.error}`, 'error');
+    });
+}
+
+// ================================================================
+// TABS & UTILS
+// ================================================================
+
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
+    document.getElementById(`panel-${name}`).classList.add('active');
+    if (name === 'inventory') refreshInv();
+    if (name === 'entities') refreshEntities();
+}
+
+function refreshAll() {
+    S.socket.emit('request:status', {}, r => {
+        if (r?.success) { S.bots = {}; r.bots.forEach(b => S.bots[b.id] = b); renderBots(); }
+    });
+}
+
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+
+function toast(msg, type = 'info') {
+    const c = document.getElementById('toasts'), t = document.createElement('div');
+    t.className = `toast ${type}`; t.textContent = msg; c.appendChild(t);
+    setTimeout(() => { if (t.parentNode) t.parentNode.removeChild(t); }, 4000);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    const tabs = ['overview', 'killaura', 'chat', 'inventory', 'entities', 'console'];
+    const n = parseInt(e.key);
+    if (n >= 1 && n <= tabs.length) switchTab(tabs[n - 1]);
+    if (e.key === 'Escape') closeModal();
+    if (e.ctrlKey && e.key === 'n') { e.preventDefault(); showCreateModal(); }
+});
+
+document.getElementById('createModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// Auto refresh entities
+setInterval(() => {
+    const t = document.querySelector('.tab.active')?.dataset.tab;
+    if (t === 'entities' && S.selectedId) refreshEntities();
+}, 5000);
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+    initSocket();
+    showNoBot();
+    console.log('⚔️ MC Bot Dashboard v5.0 - KillAura Edition');
+});
+</script>
+</body>
+</html>

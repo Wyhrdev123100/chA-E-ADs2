@@ -1,0 +1,14 @@
+{
+  "name": "minecraft-bot-dashboard",
+  "version": "4.0.0",
+  "description": "Minecraft Bot Dashboard - KillAura Edition",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "mineflayer": "^4.14.0"
+  }
+}
